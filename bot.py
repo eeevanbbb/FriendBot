@@ -7,6 +7,7 @@ import re
 import argparse
 from nba_api.live.nba.endpoints import scoreboard
 import gensim
+import random
 
 # -test to do a local repl
 parser = argparse.ArgumentParser()
@@ -66,6 +67,10 @@ def response_for_text(text):
       return make_similar_words(word)
     else:
       return 'What word do you want me to guess similar words for?'
+  elif text.startswith('$who'):
+    return make_who_text()
+  elif text.startswith('$dice'):
+    return make_dice_text()
   elif text.startswith('$'):
     return 'Sorry, I don\'t know that one yet.'
 
@@ -83,9 +88,9 @@ def make_help_text():
   $echo <text>
   $lakers
   $semantle <word>
+  $dice
 
-  Check back soon for more features!
-  '''
+  Check back soon for more features!'''
 
 
 def make_lakers_text():
@@ -145,6 +150,36 @@ def make_similar_words(word):
   return text
 
 
+def make_who_text():
+  return '''It\'s me, FriendBot!
+
+  I\'m here for funsies! Check out $help to see what I can do. If I break down, please pour one out for my creator who has to debug this nonsense.
+
+  I\'m looking forward to being your friend!'''
+
+
+def make_dice_text():
+  rand1 = random.randint(1, 6)
+  rand2 = random.randint(1, 6)
+  return f'{num_to_emoji(rand1)} {num_to_emoji(rand2)}'
+
+
+def num_to_emoji(num):
+  if num == 1:
+    return '1️⃣'
+  elif num == 2:
+    return '2️⃣'
+  elif num == 3:
+    return '3️⃣'
+  elif num == 4:
+    return '4️⃣'
+  elif num == 5:
+    return '5️⃣'
+  elif num == 6:
+    return '6️⃣'  
+  return f'{num}'            
+
+
 # do the thing
 if args.test:
   while True:
@@ -156,5 +191,3 @@ else:
   token_file = open("token.txt", "r")
   client.run(token_file.read())
   token_file.close()
-
-
