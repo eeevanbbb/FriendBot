@@ -6,6 +6,7 @@ from pyfiglet import Figlet
 import re
 import argparse
 from nba_api.live.nba.endpoints import scoreboard
+import gensim
 
 # -test to do a local repl
 parser = argparse.ArgumentParser()
@@ -16,6 +17,9 @@ args = parser.parse_args()
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
+
+# global setup
+word_model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
 
 
 @client.event
@@ -45,13 +49,25 @@ def response_for_text(text):
     if len(parts) > 1:
       text = parts[1]
       return '```' + make_big_text(text) + '```'
+    else:
+      return 'What word do you want me to make big?'
   elif text.startswith('$help'):
     return make_help_text()
   elif text.startswith('$echo'):
     if len(parts) > 1:
       return ' '.join(parts[1:])
+    else:
+      return 'What do you want me to echo?'
   elif text.startswith('$lakers'):
     return make_lakers_text()
+  elif text.startswith('$semantle'):
+    if len(parts) > 1:
+      word = parts[1]
+      return make_similar_words(word)
+    else:
+      return 'What word do you want me to guess similar words for?'
+  elif text.startswith('$'):
+    return 'Sorry, I don\'t know that one yet.'
 
 
 def make_big_text(text):
@@ -63,9 +79,10 @@ def make_help_text():
   return '''Here are some things you can try!
 
   $hello
-  $big <text>
+  $big <word>
   $echo <text>
   $lakers
+  $semantle <word>
 
   Check back soon for more features!
   '''
@@ -117,6 +134,15 @@ def get_suffix(num):
     return 'nd'
   else:
     return 'th'
+
+
+def make_similar_words(word):
+  text = ''
+  for word, similarity in word_model.most_similar(positive=[word], topn=10):
+    if '_' in word:
+      continue
+    text += f'- {word}\n'
+  return text
 
 
 # do the thing
