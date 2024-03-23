@@ -71,7 +71,7 @@ def response_for_text(text):
 
 
 def make_big_text(text):
-  font = Figlet(font='doh')
+  font = Figlet(font='letters')
   return font.renderText(text)  
 
 
