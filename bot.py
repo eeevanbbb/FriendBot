@@ -46,7 +46,12 @@ async def on_message(message):
   text_response = maybe_make_text_response(message.content)
   if text_response:
     print(f'Will respond: {text_response}')
-    await message.channel.send(text_response)
+    idx = 0
+    MAX_LEN = 2000
+    while len(text_response) > idx:
+      chunk = text_response[idx:idx + MAX_LEN]
+      await message.channel.send(chunk)
+      idx += MAX_LEN
   else:
     print('No response')
 
@@ -88,6 +93,12 @@ def maybe_make_text_response(text):
       return 'What word would you like rhymes for?'
   elif text.startswith('$joke'):
     return make_joke_text()
+  elif text.startswith('$poem'):
+    if len(parts) > 1:
+      topic = parts[1]
+      return make_poem_text(topic)
+    else:
+      return 'On which topic would you like me to wax poetic?'
   elif text.startswith('$ '):
     if len(parts) > 1:
       return get_gemini_response(parts[1:])
@@ -123,6 +134,13 @@ def get_gemini_response(text):
     return 'Sorry, I can\'t answer that 😬'
 
 
+def make_poem_text(topic):
+  try:
+    return gemini_model.generate_content(f'Write me a poem about {topic}').text
+  except:
+    return 'Sorry, I can\'t write a poem about {topic} 😬'
+
+
 def make_help_text():
   return '''Here are some things you can try!
 
@@ -132,6 +150,7 @@ def make_help_text():
   $hello
   $joke
   $lakers
+  $poem <topic>
   $rhyme <word>
   $semantle <word>
 
