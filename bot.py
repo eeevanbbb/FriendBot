@@ -9,6 +9,8 @@ from nba_api.live.nba.endpoints import scoreboard
 import gensim
 import random
 import google.generativeai as genai
+import python_weather
+import asyncio
 
 # -test to do a local repl
 parser = argparse.ArgumentParser()
@@ -99,6 +101,12 @@ def maybe_make_text_response(text):
       return make_poem_text(topic)
     else:
       return 'On which topic would you like me to wax poetic?'
+  elif text.startswith('$weather'):
+    if len(parts) > 1:
+      city = ' '.join(parts[1:])
+      return make_weather_summary(city)
+    else:
+      return make_weather_summary('Los Angeles')
   elif text.startswith('$ '):
     if len(parts) > 1:
       return get_gemini_response(parts[1:])
@@ -153,6 +161,7 @@ def make_help_text():
   $poem <topic>
   $rhyme <word>
   $semantle <word>
+  $weather <city>
 
   Check back soon for more features!'''
 
@@ -241,7 +250,27 @@ def num_to_emoji(num):
     return '5️⃣'
   elif num == 6:
     return '6️⃣'  
-  return f'{num}'            
+  return f'{num}'
+
+
+def make_weather_summary(city):
+  raw_weather = asyncio.run(fetch_weather_data(city))
+  try:
+    return gemini_model.generate_content(f'Summarize this weather data including the city and use emojis: {raw_weather}').text
+  except:
+    return f'I was unable to get the weather for {city} 😬'
+
+
+async def fetch_weather_data(city):
+  data = []
+  async with python_weather.Client(unit=python_weather.IMPERIAL) as client:
+    weather = await client.get(city)  
+    data.append(weather.location)  
+    for daily in weather.daily_forecasts:
+      data.append(str(daily))      
+      for hourly in daily.hourly_forecasts:
+        data.append(f' --> {hourly!r}')        
+  return '\n'.join(data)
 
 
 # do the thing
