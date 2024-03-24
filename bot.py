@@ -45,7 +45,7 @@ async def on_message(message):
     return
 
   print(f'Received message: {message.content}')
-  text_response = maybe_make_text_response(message.content)
+  text_response = await maybe_make_text_response(message.content)
   if text_response:
     print(f'Will respond: {text_response}')
     idx = 0
@@ -58,7 +58,7 @@ async def on_message(message):
     print('No response')
 
 
-def maybe_make_text_response(text):
+async def maybe_make_text_response(text):
   parts = text.split(' ')
   if text.startswith('$hello'):
       return 'Hello!'
@@ -104,9 +104,9 @@ def maybe_make_text_response(text):
   elif text.startswith('$weather'):
     if len(parts) > 1:
       city = ' '.join(parts[1:])
-      return make_weather_summary(city)
+      return await make_weather_summary(city)
     else:
-      return make_weather_summary('Los Angeles')
+      return await make_weather_summary('Los Angeles')
   elif text.startswith('$ '):
     if len(parts) > 1:
       return get_gemini_response(parts[1:])
@@ -253,12 +253,8 @@ def num_to_emoji(num):
   return f'{num}'
 
 
-def make_weather_summary(city):
-  raw_weather = ''
-  if args.test:
-    raw_weather = asyncio.run(fetch_weather_data(city))
-  else:
-    raw_weather = await fetch_weather_data(city)
+async def make_weather_summary(city):
+  raw_weather = await fetch_weather_data(city)
   try:
     return gemini_model.generate_content(f'Summarize this weather data including the city and use emojis: {raw_weather}').text
   except:
@@ -281,7 +277,7 @@ async def fetch_weather_data(city):
 if args.test:
   while True:
     prompt = input()
-    response = maybe_make_text_response(prompt)
+    response = asyncio.run(maybe_make_text_response(prompt))
     if response:
       print(response)
 else:
