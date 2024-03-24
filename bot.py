@@ -8,6 +8,7 @@ import argparse
 from nba_api.live.nba.endpoints import scoreboard
 import gensim
 import random
+import google.generativeai as genai
 
 # -test to do a local repl
 parser = argparse.ArgumentParser()
@@ -20,7 +21,15 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 # global setup
-word_model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+# limit model to 100k so GCP micro instance doesn't explode
+word_model = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True, limit=100000)
+
+# set up gemini
+gemini_token_file = open("gemini_token.txt", "r")
+gemini_api_key = gemini_token_file.read()
+gemini_token_file.close()
+genai.configure(api_key=gemini_api_key.rstrip())
+gemini_model = genai.GenerativeModel('gemini-pro')
 
 
 @client.event
@@ -34,15 +43,15 @@ async def on_message(message):
     return
 
   print(f'Received message: {message.content}')
-  response = response_for_text(message.content)
-  if response:
-    print(f'Will respond: {response}')
-    await message.channel.send(response)
+  text_response = maybe_make_text_response(message.content)
+  if text_response:
+    print(f'Will respond: {text_response}')
+    await message.channel.send(text_response)
   else:
     print('No response')
 
 
-def response_for_text(text):
+def maybe_make_text_response(text):
   parts = text.split(' ')
   if text.startswith('$hello'):
       return 'Hello!'
@@ -71,6 +80,19 @@ def response_for_text(text):
     return make_who_text()
   elif text.startswith('$dice'):
     return make_dice_text()
+  elif text.startswith('$rhyme'):
+    if len(parts) > 1:
+      word = parts[1]
+      return make_rhymes_text(word)
+    else:
+      return 'What word would you like rhymes for?'
+  elif text.startswith('$joke'):
+    return make_joke_text()
+  elif text.startswith('$ '):
+    if len(parts) > 1:
+      return get_gemini_response(parts[1:])
+    else:
+      return 'Are you trying to talk to me? Try $help to see what I can do!'
   elif text.startswith('$'):
     return 'Sorry, I don\'t know that one yet.'
 
@@ -80,15 +102,38 @@ def make_big_text(text):
   return font.renderText(text)  
 
 
+def make_rhymes_text(word):
+  try:
+    return gemini_model.generate_content(f'List up to 10 words that rhyme with {word}').text
+  except:
+    return f'Sorry, I can\'t rhyme with {word} 😬'
+
+
+def make_joke_text():
+  try:
+    return gemini_model.generate_content('Tell me a joke').text
+  except:
+    return f'Sorry, I\'m not feeling funny today 😬'
+
+
+def get_gemini_response(text):
+  try:
+    return gemini_model.generate_content(text).text
+  except:
+    return 'Sorry, I can\'t answer that 😬'
+
+
 def make_help_text():
   return '''Here are some things you can try!
 
-  $hello
   $big <word>
-  $echo <text>
-  $lakers
-  $semantle <word>
   $dice
+  $echo <text>
+  $hello
+  $joke
+  $lakers
+  $rhyme <word>
+  $semantle <word>
 
   Check back soon for more features!'''
 
@@ -125,7 +170,7 @@ def make_lakers_text():
       if lakers_score > other_score:
         text += f'Lakers are up {lakers_score - other_score} on the {other_team}! {lakers_score}-{other_score}. Let\'s go!!!'
       elif lakers_score < other_score:
-        text += f'Lakers are trailing by {lakers_score - other_score} to the {other_team}. It\'s {lakers_score}-{other_score}. We got this.'
+        text += f'Lakers are trailing by {other_score - lakers_score} to the {other_team}. It\'s {lakers_score}-{other_score}. We got this.'
       else:
         text += f'It\'s all tied up at {lakers_score}! Let\'s beat the {other_team}!'
       return text
@@ -184,7 +229,7 @@ def num_to_emoji(num):
 if args.test:
   while True:
     prompt = input()
-    response = response_for_text(prompt)
+    response = maybe_make_text_response(prompt)
     if response:
       print(response)
 else:
