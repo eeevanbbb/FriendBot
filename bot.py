@@ -258,7 +258,7 @@ def make_weather_summary(city):
   if args.test:
     raw_weather = asyncio.run(fetch_weather_data(city))
   else:
-    raw_weather = fetch_weather_data(city)
+    raw_weather = await fetch_weather_data(city)
   try:
     return gemini_model.generate_content(f'Summarize this weather data including the city and use emojis: {raw_weather}').text
   except:
